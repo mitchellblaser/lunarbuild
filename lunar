@@ -75,6 +75,11 @@ if [ "$SHOW_HELP" == "false" ]; then
     echo "Building Target $BIN_NAME..."
 
     # OVERRIDES #
+    if [ ! -f "CMakeLists.txt" ]; then
+        echo "CMakeLists.txt does not exist."
+        exit
+    fi
+
     if [ ! -d "./build" ]; then
         BUILD_CLEAN="true"
         echo "FORCING CLEAN BUILD: ./build directory does not exist."
