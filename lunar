@@ -1,0 +1,131 @@
+#!/bin/bash
+
+# DEFAULTS #
+SHOW_HELP="false"
+BUILD_CLEAN="false"
+COMPILER="ninja"
+SYNC_CLOCK="false"
+RUN_POST_BUILD="false"
+BIN_NAME="output"
+
+for var in "$@"
+do
+    if [ ${var:0:2} != "--" ]; then
+        BIN_NAME="$var"
+    fi
+
+    if [ "$var" == "--clean" ]; then
+        BUILD_CLEAN="true"
+    fi
+
+    if [ "$var" == "--ninja" ]; then
+        COMPILER="ninja"
+    fi
+
+    if [ "$var" == "--make" ]; then
+        COMPILER="make"
+    fi
+
+    if [ "$var" == "--help" ]; then
+        SHOW_HELP="true"
+    fi
+
+    if [ "$var" == "--clockset" ]; then
+        echo "LUNAR: Your Options require sudo permissions."
+        if [ "$(sudo whoami)" != "root" ]; then
+            exit
+        fi
+        SYNC_CLOCK="true"
+    fi
+
+    if [ "$var" == "--run" ]; then
+        RUN_POST_BUILD="true"
+    fi
+
+done
+
+if [ "$SHOW_HELP" == "true" ]; then
+    echo "    __                 "         
+    echo "   / /   __  ______  ____ ______"
+    echo "  / /   / / / / __ \/ __ \/ ___/"
+    echo " / /___/ /_/ / / / / /_/ / /    "
+    echo "/_____/\__,_/_/ /_/\__,_/_/     "
+    echo "      BUILD SYSTEM V0.4        "
+    echo "  github.com/mitchellblaser"
+    echo ""
+    echo " USAGE:"
+    echo " ./lunar [OPTIONS]"
+    echo " --help: show this window."
+    echo " --clean: clean build"
+    echo " --ninja: select ninja compiler (default)"
+    echo " --make: select make compiler"
+    echo " --clockset: sync clock with hardware clock (fix WSL build warnings)"
+    echo ""
+fi
+
+if [ "$SHOW_HELP" == "false" ]; then
+    echo "    __                 "         
+    echo "   / /   __  ______  ____ ______"
+    echo "  / /   / / / / __ \/ __ \/ ___/"
+    echo " / /___/ /_/ / / / / /_/ / /    "
+    echo "/_____/\__,_/_/ /_/\__,_/_/     "
+    echo "      BUILD SYSTEM V0.4        "
+    echo "  github.com/mitchellblaser"
+    echo "================================"
+    echo "Building Target $BIN_NAME..."
+
+    # OVERRIDES #
+    if [ ! -d "./build" ]; then
+        BUILD_CLEAN="true"
+        echo "FORCING CLEAN BUILD: ./build directory does not exist."
+    fi
+
+    if [ "$SYNC_CLOCK" == "true" ]; then
+        echo "Synchronizing Clock with Hardware..."
+        sudo hwclock -s
+    fi
+
+    if [ "$BUILD_CLEAN" == "true" ]; then
+        if [ -d "./build" ]; then
+            echo "Build Directory Exists. Removing Recursively..."
+            rm -rf ./build
+        fi
+        echo "Creating Build Directory..."
+        mkdir build
+        cd build
+        echo "Checking Selected Compiler..."
+        echo "Running CMake..."
+        if [ "$COMPILER" == "ninja" ]; then
+            cmake -GNinja .. 1>/dev/null
+        else
+            cmake .. 1>/dev/null
+        fi
+    fi
+    if [ "$BUILD_CLEAN" == "false" ]; then
+        echo "Running Dirty Build. Run with --clean to regenerate from makefile..."
+        cd build
+    fi
+
+    if [ "$COMPILER" == "make" ]; then
+        echo "Compiling Application with make..."
+        make 1>/dev/null
+    elif [ "$COMPILER" == "ninja" ]; then
+        echo "Compiling Application with Ninja..."
+        $COMPILER
+    else
+        echo "Compiling Application..."
+        $COMPILER 1>/dev/null
+    fi
+
+    if [ "$RUN_POST_BUILD" == "true" ]; then
+        echo ""
+        echo ""
+        echo ""
+        if [[ -f ./$BIN_NAME ]]; then
+            ./$BIN_NAME
+        else
+            echo "Application Binary does not exist!"
+        fi
+    fi
+
+fi
